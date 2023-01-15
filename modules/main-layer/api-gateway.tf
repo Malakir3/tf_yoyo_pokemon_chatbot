@@ -2,7 +2,7 @@
 # API Gateway本体
 #####################################################
 resource "aws_api_gateway_rest_api" "this" {
-  name = "yoyo_pokemon_line_chatbot"
+  name           = "yoyo_pokemon_line_chatbot"
   api_key_source = "HEADER"
   endpoint_configuration {
     types = [
@@ -110,10 +110,10 @@ resource "aws_api_gateway_method_settings" "post" {
 
 # lambdaを実行する許可
 resource "aws_lambda_permission" "main" {
-  action = "lambda:InvokeFunction"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.main.arn
-  principal = "apigateway.amazonaws.com"
-  source_arn = "${aws_api_gateway_rest_api.this.execution_arn}/*/POST/judge"
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/POST/judge"
 }
 
 
@@ -122,7 +122,7 @@ resource "aws_lambda_permission" "main" {
 #####################################################
 # Cloudwatchロググループ
 resource "aws_cloudwatch_log_group" "apigw" {
-  name = "API-Gateway-Execution-Logs_${var.api_id}/dev"
+  name              = "API-Gateway-Execution-Logs_${var.api_id}/dev"
   retention_in_days = var.retention_in_days
   tags = {
     "Name" = "API-Gateway-Execution-Logs_${var.api_id}/dev"
@@ -131,9 +131,9 @@ resource "aws_cloudwatch_log_group" "apigw" {
 
 # Cloudwatchlogsのロール
 resource "aws_iam_role" "logs" {
-  name = "APIGateway-CloudWatchLogs-Connection"
-  assume_role_policy = templatefile("./iam/trust-apigw.json", {})
-  description = "Allows API Gateway to push logs to CloudWatch Logs."
+  name                 = "APIGateway-CloudWatchLogs-Connection"
+  assume_role_policy   = templatefile("./iam/trust-apigw.json", {})
+  description          = "Allows API Gateway to push logs to CloudWatch Logs."
   max_session_duration = 3600
 }
 
@@ -144,7 +144,7 @@ data "aws_iam_policy" "logs" {
 
 # AWS管理ポリシーをロールにアタッチ
 resource "aws_iam_role_policy_attachment" "logs" {
-  role = aws_iam_role.logs.name
+  role       = aws_iam_role.logs.name
   policy_arn = data.aws_iam_policy.logs.arn
 }
 
