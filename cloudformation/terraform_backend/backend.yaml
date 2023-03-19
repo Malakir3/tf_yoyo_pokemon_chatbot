@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  s3bucket deployment for terraform
+
+Parameters:
+  SystemName:
+    Description: System Name
+    Type: String
+    Default: yoyo-pk
+    AllowedPattern: ^[a-z0-9\-]*$
+  TfEnv:
+    Description: Terraform enviroment
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - stg
+    - prd
+
+# reference
+# https://ops.jig-saw.com/tech-cate/terraform-aws-cloudformation
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${SystemName}-${TfEnv}-terragruntbackend-${AWS::AccountId}'
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+          -
+            Key: SystemName
+            Value: !Sub '${SystemName}'
+          -
+            Key: Name
+            Value: !Sub '${SystemName}-${TfEnv}-terragruntbackend-${AWS::AccountId}'
+          -
+            Key: Env
+            Value: !Sub '${TfEnv}'
+
+  DynamodbTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${SystemName}-${TfEnv}-terragrunt-backendTable'
+      AttributeDefinitions:
+        - AttributeName: LockID
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: LockID
+          KeyType: HASH
+      Tags:
+          -
+            Key: SystemName
+            Value: !Sub '${SystemName}'
+          -
+            Key: Name
+            Value: !Sub '${SystemName}-${TfEnv}-terragrunt-backendTable'
+          -
+            Key: Env
+            Value: !Sub '${TfEnv}'
+
+  TerraformS3BackendPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt S3Bucket.Arn
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !Sub ${S3Bucket.Arn}/*
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+            Resource: !GetAtt DynamodbTable.Arn
